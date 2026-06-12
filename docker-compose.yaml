@@ -1,0 +1,9 @@
+services:
+  eagle-design-viewer:
+    image: nekomaido/eagle-webui:latest
+    container_name: eagle-design-viewer
+    ports:
+      - '34917:34917'
+    volumes:
+      - '/mnt/monitoring/@GP66_D드라이브 백업/my-eagle/Design.library:/app/library'
+    restart: unless-stopped
