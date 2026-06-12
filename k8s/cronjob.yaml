@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: eagle-gallery-sync
+  namespace: default
+spec:
+  schedule: "0 * * * *" # Every hour
+  concurrencyPolicy: Replace
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sync
+            image: ghcr.io/mindulle/sonagi-eagle-gallery:latest
+            imagePullPolicy: Always
+            command: ["python", "build_eagle_gallery.py"]
+            volumeMounts:
+            - name: db-volume
+              mountPath: /app/eagle_gallery.db
+            - name: library-volume
+              mountPath: /mnt/monitoring/@GP66_D드라이브 백업/my-eagle/Design.library
+          restartPolicy: OnFailure
+          volumes:
+          - name: db-volume
+            hostPath:
+              path: /home/mindulle/design-tools-setup/eagle_gallery.db
+              type: FileOrCreate
+          - name: library-volume
+            hostPath:
+              path: /mnt/monitoring/@GP66_D드라이브 백업/my-eagle/Design.library
+              type: Directory

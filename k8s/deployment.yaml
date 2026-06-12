@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eagle-gallery-web
+  namespace: default
+  labels:
+    app: eagle-gallery-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eagle-gallery-web
+  template:
+    metadata:
+      labels:
+        app: eagle-gallery-web
+    spec:
+      containers:
+      - name: web
+        image: ghcr.io/mindulle/sonagi-eagle-gallery:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 34920
+        volumeMounts:
+        - name: db-volume
+          mountPath: /app/eagle_gallery.db
+        - name: library-volume
+          mountPath: /mnt/monitoring/@GP66_D드라이브 백업/my-eagle/Design.library
+      volumes:
+      - name: db-volume
+        hostPath:
+          path: /home/mindulle/design-tools-setup/eagle_gallery.db
+          type: FileOrCreate
+      - name: library-volume
+        hostPath:
+          path: /mnt/monitoring/@GP66_D드라이브 백업/my-eagle/Design.library
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eagle-gallery-svc
+  namespace: default
+spec:
+  selector:
+    app: eagle-gallery-web
+  ports:
+    - protocol: TCP
+      port: 34920
+      targetPort: 34920
+  type: ClusterIP
