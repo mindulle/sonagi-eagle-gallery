@@ -44,8 +44,9 @@ metadata:
 spec:
   selector:
     app: eagle-gallery-web
+  type: NodePort
   ports:
     - protocol: TCP
       port: 34920
       targetPort: 34920
-  type: ClusterIP
+      nodePort: 34920
