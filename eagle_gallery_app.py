@@ -5,7 +5,19 @@ from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 import json
 
+import sentry_sdk
+from prometheus_fastapi_instrumentator import Instrumentator
+
+sentry_sdk.init(
+    dsn="https://7ca8832178e3b8020f3cd4383c387d74@o4504455820869632.ingest.us.sentry.io/4511552575438848",
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
+
+
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,
