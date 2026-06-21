@@ -21,6 +21,7 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 34920
+          hostPort: 34920
         volumeMounts:
         - name: db-volume
           mountPath: /app/eagle_gallery.db
@@ -44,9 +45,8 @@ metadata:
 spec:
   selector:
     app: eagle-gallery-web
-  type: NodePort
+  type: ClusterIP
   ports:
     - protocol: TCP
       port: 34920
       targetPort: 34920
-      nodePort: 34920
