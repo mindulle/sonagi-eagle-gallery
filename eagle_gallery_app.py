@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,11 +9,13 @@ import json
 import sentry_sdk
 from prometheus_fastapi_instrumentator import Instrumentator
 
-sentry_sdk.init(
-    dsn="https://7ca8832178e3b8020f3cd4383c387d74@o4504455820869632.ingest.us.sentry.io/4511552575438848",
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-)
+sentry_dsn = os.environ.get('SENTRY_DSN')
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 app = FastAPI()
 
@@ -31,7 +33,7 @@ DB_PATH = 'eagle_gallery.db'
 
 def get_db():
     conn = sqlite3.connect(DB_PATH, timeout=20)
-    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute('PRAGMA journal_mode=WAL;')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -69,6 +71,9 @@ def get_items(limit: int = 50, offset: int = 0, search: str = ''):
 
 @app.get('/api/image/{item_id}/{type}')
 def get_image(item_id: str, type: str):
+    if type not in ['thumbnail', 'original']:
+        raise HTTPException(status_code=400, detail='Invalid image type')
+
     conn = get_db()
     c = conn.cursor()
     c.execute('SELECT thumbnail_path, original_path FROM items WHERE id = ?', (item_id,))

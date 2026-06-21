@@ -4,21 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sonagi Eagle Gallery</title>
-    <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        .header { text-align: center; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; }
-        #search { padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
-        button { padding: 10px 20px; border-radius: 5px; border: none; background: #007bff; color: white; font-size: 16px; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #0056b3; }
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); }
-        .card img { width: 100%; height: 200px; object-fit: cover; display: block; background: #ddd; }
-        .card-info { padding: 10px; }
-        .card-title { font-size: 14px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tag { display: inline-block; background: #e1e4e8; font-size: 11px; padding: 2px 6px; border-radius: 3px; margin: 2px 2px 0 0; color: #555; }
-        #loading { text-align: center; padding: 20px; display: none; }
-    </style>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="header">
@@ -28,82 +14,6 @@
     <div class="gallery" id="gallery"></div>
     <div id="loading">Loading more...</div>
 
-    <script>
-        let offset = 0;
-        let currentSearch = '';
-        let isLoading = false;
-
-        window.onload = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const querySearch = urlParams.get('search');
-            if (querySearch) {
-                currentSearch = querySearch;
-                document.getElementById('search').value = currentSearch;
-            }
-            loadItems();
-        };
-
-        async function loadItems() {
-            if (isLoading) return;
-            isLoading = true;
-            document.getElementById('loading').style.display = 'block';
-
-            try {
-                const res = await fetch(`/api/items?limit=50&offset=${offset}&search=${encodeURIComponent(currentSearch)}`);
-                const items = await res.json();
-
-                const gallery = document.getElementById('gallery');
-                if (offset === 0) gallery.innerHTML = '';
-
-                items.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.onclick = () => window.open(`/api/image/${item.id}/original`, '_blank');
-
-                    const imgSrc = item.has_thumbnail
-                        ? `/api/image/${item.id}/thumbnail`
-                        : `/api/image/${item.id}/original`;
-                    const tagsHtml = item.tags.slice(0, 3).map(t => `<span class="tag">${t}</span>`).join('');
-
-                    card.innerHTML = `
-                        <img src="${imgSrc}" loading="lazy" onerror="this.style.display='none'">
-                        <div class="card-info">
-                            <h3 class="card-title">${item.name || 'Untitled'}</h3>
-                            <div>${tagsHtml}</div>
-                        </div>
-                    `;
-                    gallery.appendChild(card);
-                });
-
-                offset += 50;
-            } catch (e) {
-                console.error(e);
-            } finally {
-                isLoading = false;
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
-
-        function searchItems() {
-            currentSearch = document.getElementById('search').value;
-            offset = 0;
-
-            const newUrl = new URL(window.location.href);
-            if (currentSearch) {
-                newUrl.searchParams.set('search', currentSearch);
-            } else {
-                newUrl.searchParams.delete('search');
-            }
-            window.history.pushState({}, '', newUrl.toString());
-
-            loadItems();
-        }
-
-        window.onscroll = () => {
-            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                loadItems();
-            }
-        };
-    </script>
+    <script src="/static/main.js"></script>
 </body>
 </html>

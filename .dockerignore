@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+.git/
+.github/
+k8s/
