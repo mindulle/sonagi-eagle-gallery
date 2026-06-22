@@ -6,7 +6,7 @@ import sys
 
 from tqdm import tqdm
 
-LOCK_FILE = "/tmp/build_eagle_gallery.lock"
+LOCK_FILE = "eagle_gallery.lock"
 DB_PATH = "eagle_gallery.db"
 LIBRARY_PATH = "/mnt/monitoring/@GP66_D드라이브 백업/my-eagle/Design.library/images"
 
