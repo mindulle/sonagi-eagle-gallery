@@ -15,11 +15,11 @@ def export_project():
     c = conn.cursor()
     
     # Fetch 40 items with tags
-    c.execute("SELECT * FROM items WHERE tags != '[]' AND tags != '' AND tags IS NOT NULL ORDER BY id DESC LIMIT 40")
+    c.execute("SELECT * FROM items WHERE tags != '[]' AND tags != '' AND tags IS NOT NULL AND LOWER(ext) IN ('png', 'jpg', 'jpeg', 'gif', 'webp') ORDER BY id DESC LIMIT 40")
     tagged_rows = c.fetchall()
     
     # Fetch 20 items without tags (or random others)
-    c.execute("SELECT * FROM items WHERE tags = '[]' OR tags = '' OR tags IS NULL ORDER BY id DESC LIMIT 20")
+    c.execute("SELECT * FROM items WHERE (tags = '[]' OR tags = '' OR tags IS NULL) AND LOWER(ext) IN ('png', 'jpg', 'jpeg', 'gif', 'webp') ORDER BY id DESC LIMIT 20")
     untagged_rows = c.fetchall()
     
     rows = tagged_rows + untagged_rows
