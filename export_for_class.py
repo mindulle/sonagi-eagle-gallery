@@ -4,87 +4,89 @@ import os
 import shutil
 import sqlite3
 
-
 def export_project():
     OUTPUT_DIR = "submission_ready"
     IMAGES_DIR = os.path.join(OUTPUT_DIR, "images")
-
-    # Create directories
+    
     os.makedirs(IMAGES_DIR, exist_ok=True)
-
-    # 1. Connect to DB and fetch top 60 items for the assignment
+    
     conn = sqlite3.connect("eagle_gallery.db")
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
     c.execute("SELECT * FROM items ORDER BY id DESC LIMIT 60")
     rows = c.fetchall()
-
+    
     items_data = []
-
+    
     print("Exporting data and copying images...")
     for r in rows:
         item_id = r["id"]
         ext = r["ext"]
         thumb_src = r["thumbnail_path"]
         orig_src = r["original_path"]
-
-        # Determine local paths for export
+        
         local_thumb = f"{item_id}_thumb.png"
         local_orig = f"{item_id}.{ext}" if ext else f"{item_id}_orig"
-
-        # Copy files if they exist
+        
         has_thumbnail = False
         if thumb_src and os.path.exists(thumb_src):
-            shutil.copy2(thumb_src, os.path.join(IMAGES_DIR, local_thumb))
-            has_thumbnail = True
-
+            try:
+                shutil.copy2(thumb_src, os.path.join(IMAGES_DIR, local_thumb))
+                has_thumbnail = True
+            except Exception as e:
+                print(f"Warning: failed to copy thumbnail {thumb_src}: {e}")
+            
         if orig_src and os.path.exists(orig_src):
-            shutil.copy2(orig_src, os.path.join(IMAGES_DIR, local_orig))
-
-        items_data.append(
-            {
-                "id": item_id,
-                "name": r["name"],
-                "ext": ext,
-                "tags": json.loads(r["tags"]) if r["tags"] else [],
-                "annotation": r["annotation"],
-                "url": r["url"],
-                "has_thumbnail": has_thumbnail,
-                "thumb_url": f"images/{local_thumb}",
-                "orig_url": f"images/{local_orig}",
-            }
-        )
-
-    # Get top tags for these items
+            try:
+                shutil.copy2(orig_src, os.path.join(IMAGES_DIR, local_orig))
+            except Exception as e:
+                print(f"Warning: failed to copy original {orig_src}: {e}")
+            
+        items_data.append({
+            "id": item_id,
+            "name": r["name"],
+            "ext": ext,
+            "tags": json.loads(r["tags"]) if r["tags"] else [],
+            "annotation": r["annotation"],
+            "url": r["url"],
+            "has_thumbnail": has_thumbnail,
+            "thumb_url": f"images/{local_thumb}",
+            "orig_url": f"images/{local_orig}"
+        })
+        
     c.execute("""
-        SELECT value as tag, count(*) as count
-        FROM items, json_each(items.tags)
-        WHERE items.id IN (SELECT id FROM items ORDER BY id DESC LIMIT 60)
-        GROUP BY value
+        WITH TopItems AS (SELECT id FROM items ORDER BY id DESC LIMIT 60)
+        SELECT value as tag, count(*) as count 
+        FROM items, json_each(items.tags) 
+        WHERE items.id IN TopItems
+        GROUP BY value 
         ORDER BY count DESC LIMIT 10
     """)
     tags_data = [{"tag": row["tag"], "count": row["count"]} for row in c.fetchall()]
-
+    
     c.execute("""
-        SELECT ext, count(*) as count
-        FROM items
+        WITH TopItems AS (SELECT id FROM items ORDER BY id DESC LIMIT 60)
+        SELECT ext, count(*) as count 
+        FROM items 
         WHERE ext != '' AND ext IS NOT NULL
-        AND id IN (SELECT id FROM items ORDER BY id DESC LIMIT 60)
-        GROUP BY ext
+        AND items.id IN TopItems
+        GROUP BY ext 
         ORDER BY count DESC LIMIT 10
     """)
     exts_data = [{"ext": row["ext"], "count": row["count"]} for row in c.fetchall()]
-
+    
     conn.close()
 
-    # Dump JSON
-    export_data = {"items": items_data, "tags": tags_data, "exts": exts_data}
+    export_data = {
+        "items": items_data,
+        "tags": tags_data,
+        "exts": exts_data
+    }
     with open(os.path.join(OUTPUT_DIR, "data.json"), "w", encoding="utf-8") as f:
         json.dump(export_data, f, ensure_ascii=False, indent=2)
 
     print("Generating HTML/CSS/JS files...")
-    # Generate HTML files (Semantic Markup)
-    # 1. index.html
+    
     html_index = """<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -106,7 +108,7 @@ def export_project():
             </ul>
         </nav>
     </header>
-
+    
     <main class="layout">
         <aside class="sidebar">
             <section class="sidebar-section">
@@ -118,7 +120,7 @@ def export_project():
                 <ul id="tag-list" class="filter-list"></ul>
             </section>
         </aside>
-
+        
         <article class="main-content">
             <div class="search-bar">
                 <input type="text" id="search" placeholder="Search by name or tag...">
@@ -145,7 +147,6 @@ def export_project():
 </body>
 </html>"""
 
-    # 2. content.html
     html_content = """<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -178,7 +179,6 @@ def export_project():
 </body>
 </html>"""
 
-    # 3. about.html
     html_about = """<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -212,7 +212,6 @@ def export_project():
 </body>
 </html>"""
 
-    # 4. style.css (Semantic & Grid/Flexbox)
     css_content = """* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
 body { background: #faf9f7; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
 
@@ -266,28 +265,24 @@ footer { background: #333; color: white; text-align: center; padding: 20px; marg
 @media (max-width: 768px) { .layout { flex-direction: column; } .gallery { column-count: 2; } .lightbox-content { flex-direction: column; } }
 """
 
-    # 5. main.js (jQuery 4.0.0)
     js_content = """let globalData = null;
 
 $(function() {
-    // Initialize
     $.getJSON('data.json', function(data) {
         globalData = data;
         renderSidebar(data);
         renderGallery(data.items);
     });
 
-    // Search functionality
     $('#search').on('keyup', function() {
         const term = $(this).val().toLowerCase();
         filterGallery(term);
     });
 
-    // Modal close events
     $('.close-btn, .lightbox-overlay').on('click', function() {
         $('#lightbox').fadeOut(200);
     });
-
+    
     $(document).on('keydown', function(e) {
         if (e.key === 'Escape') $('#lightbox').fadeOut(200);
     });
@@ -298,13 +293,19 @@ function renderSidebar(data) {
     const $extList = $('#ext-list');
 
     $.each(data.tags, function(i, t) {
-        const $li = $('<li>').html(`<span># ${t.tag}</span> <span class="count">${t.count}</span>`);
+        const $li = $('<li>');
+        const $label = $('<span>').text('# ' + t.tag);
+        const $count = $('<span>', { class: 'count', text: t.count });
+        $li.append($label).append(' ').append($count);
         $li.on('click', () => { $('#search').val(t.tag); filterGallery(t.tag); });
         $tagList.append($li);
     });
 
     $.each(data.exts, function(i, e) {
-        const $li = $('<li>').html(`<span>. ${e.ext.toUpperCase()}</span> <span class="count">${e.count}</span>`);
+        const $li = $('<li>');
+        const $label = $('<span>').text('. ' + e.ext.toUpperCase());
+        const $count = $('<span>', { class: 'count', text: e.count });
+        $li.append($label).append(' ').append($count);
         $li.on('click', () => { $('#search').val(e.ext); filterGallery(e.ext); });
         $extList.append($li);
     });
@@ -315,19 +316,19 @@ function renderGallery(items) {
     $gallery.empty();
 
     if (items.length === 0) {
-        $gallery.html('<p>No results found.</p>');
+        $gallery.append($('<p>', { text: 'No results found.' }));
         return;
     }
 
     $.each(items, function(i, item) {
         const imgSrc = item.has_thumbnail ? item.thumb_url : item.orig_url;
-
+        
         const $card = $('<div>', { class: 'card' }).on('click', () => openModal(item));
         const $img = $('<img>', { src: imgSrc, loading: 'lazy' });
-
+        
         const $info = $('<div>', { class: 'card-info' });
         $info.append($('<h3>', { class: 'card-title', text: item.name || 'Untitled' }));
-
+        
         const $tags = $('<div>');
         if (item.ext) {
             $tags.append($('<span>', { class: 'tag', style: 'background:#1991B9; color:white;', text: item.ext.toUpperCase() }));
@@ -335,7 +336,7 @@ function renderGallery(items) {
         $.each(item.tags.slice(0, 3), function(_, t) {
             $tags.append($('<span>', { class: 'tag', text: t }));
         });
-
+        
         $info.append($tags);
         $card.append($img).append($info);
         $gallery.append($card);
@@ -354,37 +355,38 @@ function filterGallery(term) {
 }
 
 function openModal(item) {
-    $('#modal-img-wrapper').html($('<img>', { src: item.orig_url }));
-
+    $('#modal-img-wrapper').empty().append($('<img>', { src: item.orig_url }));
+    
     const $info = $('#modal-info').empty();
     $info.append($('<h2>', { text: item.name || 'Untitled' }));
-    $info.append($('<p>').html(`<strong>Ext:</strong> ${item.ext || 'Unknown'}`));
-
+    
+    const $extP = $('<p>').html('<strong>Ext:</strong> ');
+    $extP.append(document.createTextNode(item.ext || 'Unknown'));
+    $info.append($extP);
+    
     if (item.url) {
-        $info.append($('<p>').html(`<strong>Source:</strong> <a href="${item.url}" target="_blank">Link</a>`));
+        const $sourceP = $('<p>').html('<strong>Source:</strong> ');
+        $sourceP.append($('<a>', { href: item.url, target: '_blank', rel: 'noopener noreferrer', text: 'Link' }));
+        $info.append($sourceP);
     }
-
+    
     if (item.annotation) {
-        $info.append($('<p>').html(`<strong>Note:</strong> ${item.annotation}`));
+        const $noteP = $('<p>').html('<strong>Note:</strong> ');
+        $noteP.append(document.createTextNode(item.annotation));
+        $info.append($noteP);
     }
-
+    
     $('#lightbox').css('display', 'flex').hide().fadeIn(200);
 }
 """
 
-    with open(os.path.join(OUTPUT_DIR, "index.html"), "w", encoding="utf-8") as f:
-        f.write(html_index)
-    with open(os.path.join(OUTPUT_DIR, "content.html"), "w", encoding="utf-8") as f:
-        f.write(html_content)
-    with open(os.path.join(OUTPUT_DIR, "about.html"), "w", encoding="utf-8") as f:
-        f.write(html_about)
-    with open(os.path.join(OUTPUT_DIR, "style.css"), "w", encoding="utf-8") as f:
-        f.write(css_content)
-    with open(os.path.join(OUTPUT_DIR, "main.js"), "w", encoding="utf-8") as f:
-        f.write(js_content)
-
+    with open(os.path.join(OUTPUT_DIR, "index.html"), "w", encoding="utf-8") as f: f.write(html_index)
+    with open(os.path.join(OUTPUT_DIR, "content.html"), "w", encoding="utf-8") as f: f.write(html_content)
+    with open(os.path.join(OUTPUT_DIR, "about.html"), "w", encoding="utf-8") as f: f.write(html_about)
+    with open(os.path.join(OUTPUT_DIR, "style.css"), "w", encoding="utf-8") as f: f.write(css_content)
+    with open(os.path.join(OUTPUT_DIR, "main.js"), "w", encoding="utf-8") as f: f.write(js_content)
+    
     print(f"Export complete. Check the '{OUTPUT_DIR}' directory.")
-
 
 if __name__ == "__main__":
     export_project()
