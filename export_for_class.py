@@ -1,3 +1,4 @@
+# ruff: noqa: E501, E701
 import json
 import os
 import shutil
