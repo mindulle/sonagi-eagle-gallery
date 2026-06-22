@@ -29,7 +29,13 @@ async function loadSidebarFilters() {
         tagList.innerHTML = '';
         for (const t of tags) {
             const li = document.createElement('li');
-            li.innerHTML = `<span># ${t.tag}</span> <span class="count">${t.count}</span>`;
+            const label = document.createElement('span');
+            label.textContent = `# ${t.tag}`;
+            const count = document.createElement('span');
+            count.className = 'count';
+            count.textContent = t.count;
+            li.appendChild(label);
+            li.appendChild(count);
             li.onclick = () => setFilter(t.tag);
             tagList.appendChild(li);
         }
@@ -38,12 +44,22 @@ async function loadSidebarFilters() {
         extList.innerHTML = '';
         for (const e of exts) {
             const li = document.createElement('li');
-            li.innerHTML = `<span>. ${e.ext.toUpperCase()}</span> <span class="count">${e.count}</span>`;
+            const label = document.createElement('span');
+            label.textContent = `. ${e.ext.toUpperCase()}`;
+            const count = document.createElement('span');
+            count.className = 'count';
+            count.textContent = e.count;
+            li.appendChild(label);
+            li.appendChild(count);
             li.onclick = () => setFilter(e.ext);
             extList.appendChild(li);
         }
     } catch (e) {
         console.error('Failed to load sidebar filters:', e);
+        document.getElementById('tag-list').innerHTML =
+            '<li class="loading-text" style="color:red;">Error loading tags</li>';
+        document.getElementById('ext-list').innerHTML =
+            '<li class="loading-text" style="color:red;">Error loading exts</li>';
     }
 }
 
@@ -96,7 +112,6 @@ async function loadItems() {
         for (const item of items) {
             const card = document.createElement('div');
             card.className = 'card';
-            // CEO-229: Open modal instead of new window
             card.onclick = () => openModal(item.id);
 
             const imgSrc = item.has_thumbnail
@@ -183,20 +198,17 @@ async function openModal(itemId) {
     const lightbox = document.getElementById('lightbox');
     const img = document.getElementById('modal-img');
 
-    // Show modal immediately with loading state
     lightbox.classList.add('active');
     img.src = '';
     document.getElementById('modal-title').textContent = 'Loading...';
     document.getElementById('modal-ext').textContent = '...';
     document.getElementById('modal-url').textContent = '';
-    document.getElementById('modal-url').href = '#';
+    document.getElementById('modal-url').removeAttribute('href');
     document.getElementById('modal-tags').innerHTML = '';
     document.getElementById('modal-annotation').textContent = '';
 
-    // Load high-res image
     img.src = `/api/image/${itemId}/original`;
 
-    // Fetch detailed metadata
     try {
         const res = await fetch(`/api/items/${itemId}`);
         const item = await res.json();
@@ -205,9 +217,11 @@ async function openModal(itemId) {
         document.getElementById('modal-ext').textContent = (item.ext || 'Unknown').toUpperCase();
 
         const urlEl = document.getElementById('modal-url');
-        if (item.url) {
+        if (item.url && (item.url.startsWith('http://') || item.url.startsWith('https://'))) {
             urlEl.textContent = item.url;
             urlEl.href = item.url;
+            urlEl.target = '_blank';
+            urlEl.rel = 'noopener noreferrer';
         } else {
             urlEl.textContent = 'N/A';
             urlEl.removeAttribute('href');
@@ -225,7 +239,10 @@ async function openModal(itemId) {
         document.getElementById('modal-annotation').textContent =
             item.annotation || 'No notes available.';
 
-        document.getElementById('modal-original-link').href = `/api/image/${itemId}/original`;
+        const originalLink = document.getElementById('modal-original-link');
+        originalLink.href = `/api/image/${itemId}/original`;
+        originalLink.target = '_blank';
+        originalLink.rel = 'noopener noreferrer';
     } catch (e) {
         console.error('Failed to fetch item details', e);
         document.getElementById('modal-title').textContent = 'Error loading details';
@@ -237,7 +254,6 @@ function closeModal() {
     document.getElementById('modal-img').src = '';
 }
 
-// Close modal on Escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
 });
