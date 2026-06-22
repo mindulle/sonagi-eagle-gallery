@@ -11,3 +11,49 @@ button:hover { background: #0056b3; }
 .card-title { font-size: 14px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tag { display: inline-block; background: #e1e4e8; font-size: 11px; padding: 2px 6px; border-radius: 3px; margin: 2px 2px 0 0; color: #555; }
 #loading { text-align: center; padding: 20px; display: none; }
+/* Append new styles */
+.stats {
+    text-align: center;
+    padding: 10px;
+    color: #666;
+    font-size: 0.9em;
+    background: #f9f9f9;
+    border-bottom: 1px solid #eee;
+}
+
+.loading-container {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    color: #666;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #1991B9; /* Sonagi Blue */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.tag-ext {
+    background-color: #1991B9 !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #888;
+    font-size: 1.1em;
+}
