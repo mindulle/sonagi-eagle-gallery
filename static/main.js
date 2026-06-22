@@ -11,8 +11,46 @@ window.onload = () => {
         currentSearch = querySearch;
         document.getElementById('search').value = currentSearch;
     }
+
+    // CEO-228: Load Sidebar Data
+    loadSidebarFilters();
+
     loadItems();
 };
+
+async function loadSidebarFilters() {
+    try {
+        const [tagsRes, extsRes] = await Promise.all([fetch('/api/tags'), fetch('/api/exts')]);
+
+        const tags = await tagsRes.json();
+        const exts = await extsRes.json();
+
+        const tagList = document.getElementById('tag-list');
+        tagList.innerHTML = '';
+        for (const t of tags) {
+            const li = document.createElement('li');
+            li.innerHTML = `<span># ${t.tag}</span> <span class="count">${t.count}</span>`;
+            li.onclick = () => setFilter(t.tag);
+            tagList.appendChild(li);
+        }
+
+        const extList = document.getElementById('ext-list');
+        extList.innerHTML = '';
+        for (const e of exts) {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>. ${e.ext.toUpperCase()}</span> <span class="count">${e.count}</span>`;
+            li.onclick = () => setFilter(e.ext);
+            extList.appendChild(li);
+        }
+    } catch (e) {
+        console.error('Failed to load sidebar filters:', e);
+    }
+}
+
+function setFilter(term) {
+    document.getElementById('search').value = term;
+    searchItems();
+}
 
 async function loadItems() {
     if (isLoading || !hasMore) return;
@@ -58,7 +96,8 @@ async function loadItems() {
         for (const item of items) {
             const card = document.createElement('div');
             card.className = 'card';
-            card.onclick = () => window.open(`/api/image/${item.id}/original`, '_blank');
+            // CEO-229: Open modal instead of new window
+            card.onclick = () => openModal(item.id);
 
             const imgSrc = item.has_thumbnail
                 ? `/api/image/${item.id}/thumbnail`
@@ -80,7 +119,6 @@ async function loadItems() {
 
             const tagsContainer = document.createElement('div');
 
-            // Add extension as a distinct tag if available
             if (item.ext) {
                 const extSpan = document.createElement('span');
                 extSpan.className = 'tag tag-ext';
@@ -139,3 +177,67 @@ window.onscroll = () => {
         loadItems();
     }
 };
+
+/* CEO-229: Lightbox Modal Logic */
+async function openModal(itemId) {
+    const lightbox = document.getElementById('lightbox');
+    const img = document.getElementById('modal-img');
+
+    // Show modal immediately with loading state
+    lightbox.classList.add('active');
+    img.src = '';
+    document.getElementById('modal-title').textContent = 'Loading...';
+    document.getElementById('modal-ext').textContent = '...';
+    document.getElementById('modal-url').textContent = '';
+    document.getElementById('modal-url').href = '#';
+    document.getElementById('modal-tags').innerHTML = '';
+    document.getElementById('modal-annotation').textContent = '';
+
+    // Load high-res image
+    img.src = `/api/image/${itemId}/original`;
+
+    // Fetch detailed metadata
+    try {
+        const res = await fetch(`/api/items/${itemId}`);
+        const item = await res.json();
+
+        document.getElementById('modal-title').textContent = item.name || 'Untitled';
+        document.getElementById('modal-ext').textContent = (item.ext || 'Unknown').toUpperCase();
+
+        const urlEl = document.getElementById('modal-url');
+        if (item.url) {
+            urlEl.textContent = item.url;
+            urlEl.href = item.url;
+        } else {
+            urlEl.textContent = 'N/A';
+            urlEl.removeAttribute('href');
+        }
+
+        const tagsContainer = document.getElementById('modal-tags');
+        tagsContainer.innerHTML = '';
+        for (const t of item.tags) {
+            const span = document.createElement('span');
+            span.className = 'tag';
+            span.textContent = t;
+            tagsContainer.appendChild(span);
+        }
+
+        document.getElementById('modal-annotation').textContent =
+            item.annotation || 'No notes available.';
+
+        document.getElementById('modal-original-link').href = `/api/image/${itemId}/original`;
+    } catch (e) {
+        console.error('Failed to fetch item details', e);
+        document.getElementById('modal-title').textContent = 'Error loading details';
+    }
+}
+
+function closeModal() {
+    document.getElementById('lightbox').classList.remove('active');
+    document.getElementById('modal-img').src = '';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+});
