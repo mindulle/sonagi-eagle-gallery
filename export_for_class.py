@@ -157,8 +157,56 @@ def export_project():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eagle Gallery - Content</title>
+    <title>Eagle Gallery - Content Detail</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-4.0.0-beta.min.js"></script>
+    <script src="data.js"></script>
+    <script>
+    $(function() {
+        const params = new URLSearchParams(location.search);
+        const id = params.get('id');
+        if (!id) return showError("아이템 ID가 지정되지 않았습니다. 갤러리에서 항목을 선택해주세요.");
+        
+        const item = galleryData.items.find(i => i.id === id);
+        if (!item) return showError("해당 아이템을 찾을 수 없습니다.");
+        
+        renderDetail(item);
+    });
+
+    function showError(msg) {
+        $('#detail-container').html(`<div class="not-found"><h2>${msg}</h2><br><a href="index.html" class="btn-secondary">갤러리로 돌아가기</a></div>`);
+    }
+
+    function renderDetail(item) {
+        const imgSrc = item.orig_url;
+        $('#d-image').attr('src', imgSrc).on('error', function() { $(this).hide(); });
+        
+        $('#d-name').text(item.name || 'Untitled');
+        $('#d-ext').text(item.ext ? item.ext.toUpperCase() : 'Unknown');
+        
+        const $tags = $('#d-tags');
+        if (item.tags && item.tags.length > 0) {
+            $.each(item.tags, function(i, t) {
+                $tags.append($('<a>', { href: `index.html?tag=${encodeURIComponent(t)}`, class: 'tag tag-link', text: t }));
+            });
+        } else {
+            $tags.text('None');
+        }
+        
+        if (item.url) {
+            $('#d-url').append($('<a>', { href: item.url, target: '_blank', rel: 'noopener noreferrer', text: item.url }));
+        } else {
+            $('#d-url').text('N/A');
+        }
+        
+        const $note = $('#d-note');
+        if (item.annotation) {
+            $note.addClass('note-box').text(item.annotation);
+        } else {
+            $note.text('N/A');
+        }
+    }
+    </script>
 </head>
 <body>
     <header>
@@ -171,12 +219,31 @@ def export_project():
             </ul>
         </nav>
     </header>
-    <main>
-        <article class="page-content">
-            <h2>Detailed View</h2>
-            <p>This page is a placeholder for detailed content visualization required by the assignment specs.</p>
-            <p>In a real application, this would render a specific item's full detail view directly via server-side rendering or query parameters.</p>
-        </article>
+    <main class="page-layout">
+        <div class="top-bar">
+            <a href="index.html" class="btn-secondary">&larr; 갤러리로 돌아가기</a>
+        </div>
+        <div id="detail-container" class="detail-layout">
+            <div class="detail-image">
+                <img id="d-image" src="" alt="Detail Image">
+            </div>
+            <div class="detail-meta">
+                <h2 id="d-name"></h2>
+                <dl class="meta-list">
+                    <dt>Extension</dt>
+                    <dd id="d-ext"></dd>
+                    
+                    <dt>Tags</dt>
+                    <dd id="d-tags"></dd>
+                    
+                    <dt>Source URL</dt>
+                    <dd id="d-url"></dd>
+                    
+                    <dt>Annotation</dt>
+                    <dd id="d-note"></dd>
+                </dl>
+            </div>
+        </div>
     </main>
     <footer>
         <p>&copy; 2026 Web Programming Assignment - Sonagi</p>
@@ -203,13 +270,83 @@ def export_project():
             </ul>
         </nav>
     </header>
-    <main>
-        <article class="page-content">
-            <h2>About the Project</h2>
-            <p>This is a static web application built for the 3rd year 1st semester Web Programming assignment.</p>
-            <p><strong>Tech Stack:</strong> HTML5 (Semantic), CSS3 (Flexbox/Grid/Masonry), jQuery 4.0.0-beta</p>
-            <p>It exports data from a live FastAPI application into a static JS payload to ensure zero backend dependencies for grading.</p>
-        </article>
+    <main class="page-layout about-layout">
+        <section class="tech-section">
+            <h3>1. 프로젝트 개요 (Project Overview)</h3>
+            <p>본 프로젝트는 3학년 1학기 '인터넷과 웹 기초' 수업의 기말 과제 제출용으로 제작된 <b>정적 웹 갤러리</b>입니다. 실제 서버(FastAPI)에서 구동 중인 Eagle Gallery 데이터베이스의 항목들을 순수 HTML/CSS/JS 환경에서 탐색할 수 있도록 정적 덤프(Static Export)하여 구현했습니다.</p>
+        </section>
+        
+        <section class="tech-section">
+            <h3>2. 데이터 직렬화 및 CORS 우회 (Data Serialization)</h3>
+            <p>수업 시간에 배운 <code>Fetch API</code>와 <code>JSON</code> 데이터를 활용하는 것이 일반적이나, 로컬 환경(<code>file://</code> 프로토콜)에서 파일을 직접 열 경우 브라우저의 <b>CORS (Cross-Origin Resource Sharing) 보안 정책</b>으로 인해 <code>fetch('data.json')</code>이 차단되는 문제가 발생합니다.</p>
+            <p>이를 해결하기 위해 JSON 데이터를 JavaScript 객체 리터럴 형태로 직렬화하여 <code>data.js</code>에 전역 변수(<code>galleryData</code>)로 할당하는 방식을 채택했습니다. 이를 통해 로컬 환경에서도 외부 서버 없이 즉시 데이터를 로드할 수 있습니다.</p>
+            <div class="code-block"><pre><code>// data.js (서버 덤프 스크립트에서 자동 생성)
+const galleryData = {
+  "items": [
+    {
+      "id": "M83ARZ1PFTFOJ",
+      "name": "Google 로고 작도 과정",
+      "ext": "png",
+      "tags": ["Design", "Logo"]
+    }
+  ]
+};</code></pre></div>
+        </section>
+
+        <section class="tech-section">
+            <h3>3. jQuery DOM 동적 렌더링 (Dynamic DOM Rendering)</h3>
+            <p>데이터 배열을 순회하며 동적으로 HTML 요소를 생성하고 화면에 부착(Append)합니다. 수업에서 다룬 배열의 <code>map()</code> 순회 방식과 더불어, jQuery의 <code>$.each()</code> 유틸리티와 <code>$('&lt;tag&gt;')</code> 팩토리 함수를 조합 활용하여 직관적인 DOM 조작을 구현했습니다.</p>
+            <div class="code-block"><pre><code>// main.js - 갤러리 렌더링 발췌
+function renderGallery(items) {
+    const $gallery = $('#gallery').empty();
+
+    $.each(items, function(i, item) {
+        const $card = $('&lt;div&gt;', { class: 'card' }).on('click', () => openModal(item));
+        const $img = $('&lt;img&gt;', { src: item.thumb_url, loading: 'lazy' });
+        
+        const $info = $('&lt;div&gt;', { class: 'card-info' });
+        $info.append($('&lt;h3&gt;', { class: 'card-title', text: item.name }));
+        
+        $card.append($img).append($info);
+        $gallery.append($card);
+    });
+}</code></pre></div>
+        </section>
+
+        <section class="tech-section">
+            <h3>4. 배열 메서드를 활용한 필터링 (Array Filtering)</h3>
+            <p>사이드바의 태그를 클릭하거나 검색바에 텍스트를 입력하면, 자바스크립트의 내장 배열 메서드인 <code>Array.prototype.filter()</code>와 <code>some()</code>을 사용하여 조건에 맞는 아이템만 추출한 후 화면을 재렌더링합니다.</p>
+            <div class="code-block"><pre><code>// main.js - 검색 필터링 발췌
+function filterGallery(term) {
+    term = term.toLowerCase();
+    const filtered = galleryData.items.filter(item => {
+        const matchName = (item.name || '').toLowerCase().includes(term);
+        const matchTags = item.tags.some(t => t.toLowerCase().includes(term));
+        const matchExt = (item.ext || '').toLowerCase().includes(term);
+        
+        return matchName || matchTags || matchExt;
+    });
+    renderGallery(filtered);
+}</code></pre></div>
+        </section>
+
+        <section class="tech-section">
+            <h3>5. CSS Masonry 레이아웃 (Layout Design)</h3>
+            <p>높이가 제각각인 이미지들을 빈틈없이 정렬하기 위해 무거운 JS 라이브러리를 사용하는 대신, CSS3의 다단 편집 기능인 <code>column-count</code>와 <code>break-inside: avoid</code> 속성을 조합하여 가볍고 반응형에 최적화된 벽돌형(Masonry) 그리드를 구현했습니다.</p>
+            <div class="code-block"><pre><code>/* style.css */
+.gallery { 
+    column-count: 4; 
+    column-gap: 20px; 
+}
+.card { 
+    display: inline-block; 
+    width: 100%; 
+    break-inside: avoid; /* 카드가 단 사이에서 쪼개지는 것 방지 */
+    margin-bottom: 20px;
+}
+@media (max-width: 1024px) { .gallery { column-count: 3; } }
+@media (max-width: 768px) { .gallery { column-count: 2; } }</code></pre></div>
+        </section>
     </main>
     <footer>
         <p>&copy; 2026 Web Programming Assignment - Sonagi</p>
@@ -237,7 +374,7 @@ nav a:hover, nav a.active { opacity: 1; text-decoration: underline; }
 .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; break-inside: avoid; display: inline-block; width: 100%; cursor: pointer; }
 .card img { width: 100%; display: block; background: #f4f4f4; min-height: 100px; }
 .card-info { padding: 15px; }
-.card-title { font-size: 1em; margin-bottom: 10px; }
+.card-title { font-size: 1em; margin-bottom: 10px; line-height: 1.4; word-break: break-all; }
 .tag { display: inline-block; background: #eee; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; margin: 2px; }
 footer { background: #333; color: white; text-align: center; padding: 20px; margin-top: auto; }
 .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; }
@@ -246,17 +383,55 @@ footer { background: #333; color: white; text-align: center; padding: 20px; marg
 .lightbox-image-container { flex: 2; background: #f4f4f4; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .lightbox-image-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .lightbox-info { flex: 1; padding: 30px; overflow-y: auto; }
+.lightbox-info h2 { font-size: 1.5em; margin-bottom: 15px; line-height: 1.4; word-break: break-all; }
 .close-btn { position: absolute; top: 10px; right: 20px; background: none; border: none; font-size: 2em; cursor: pointer; }
-.page-content { padding: 40px; max-width: 800px; margin: 0 auto; flex: 1; }
-.page-content h2 { margin-bottom: 20px; }
-.page-content p { margin-bottom: 15px; line-height: 1.6; }
+
+/* Content Details Page */
+.page-layout { padding: 40px; max-width: 1200px; margin: 0 auto; flex: 1; width: 100%; }
+.about-layout { max-width: 900px; }
+.top-bar { margin-bottom: 20px; }
+.btn-secondary { display: inline-block; padding: 8px 16px; background: #eee; color: #333; text-decoration: none; border-radius: 4px; font-size: 0.9em; transition: background 0.2s; font-weight: bold; }
+.btn-secondary:hover { background: #ddd; }
+.detail-layout { display: flex; gap: 40px; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.detail-image { flex: 2; display: flex; align-items: center; justify-content: center; background: #f4f4f4; border-radius: 8px; padding: 20px; min-height: 400px; }
+.detail-image img { max-width: 100%; max-height: 70vh; object-fit: contain; }
+.detail-meta { flex: 1; }
+.detail-meta h2 { margin-bottom: 20px; font-size: 1.5em; border-bottom: 2px solid #1991B9; padding-bottom: 10px; line-height: 1.4; word-break: break-all; }
+.meta-list dt { font-weight: bold; color: #666; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.meta-list dd { margin-bottom: 20px; word-break: break-all; line-height: 1.5; }
+.tag-link { cursor: pointer; text-decoration: none; color: #333; }
+.tag-link:hover { background: #1991B9; color: white; }
+.note-box { background: #f9f9f9; padding: 12px; border-left: 3px solid #ccc; font-style: italic; color: #555; }
+.not-found { text-align: center; padding: 100px 20px; }
+.not-found h2 { margin-bottom: 20px; color: #999; }
+.detail-link { display: inline-block; margin-top: 15px; color: #1991B9; text-decoration: none; font-weight: bold; }
+.detail-link:hover { text-decoration: underline; }
+
+/* About Page */
+.tech-section { background: #fff; border-radius: 8px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.tech-section h3 { border-left: 4px solid #1991B9; padding-left: 12px; margin-bottom: 16px; color: #333; font-size: 1.2em; }
+.tech-section p { margin-bottom: 15px; line-height: 1.6; color: #444; }
+.tech-section b { color: #1991B9; }
+.code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 6px; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 0.9em; line-height: 1.5; margin-top: 15px; }
+
 @media (max-width: 1024px) { .gallery { column-count: 3; } }
-@media (max-width: 768px) { .layout { flex-direction: column; } .gallery { column-count: 2; } .lightbox-content { flex-direction: column; } }
+@media (max-width: 768px) { 
+    .layout { flex-direction: column; } 
+    .gallery { column-count: 2; } 
+    .lightbox-content { flex-direction: column; } 
+    .detail-layout { flex-direction: column; }
+}
 """
 
     js_content = """$(function() {
     renderSidebar(galleryData);
     renderGallery(galleryData.items);
+
+    const initTag = new URLSearchParams(location.search).get('tag');
+    if (initTag) {
+        $('#search').val(initTag);
+        filterGallery(initTag);
+    }
 
     $('#search').on('keyup', function() {
         const term = $(this).val().toLowerCase();
@@ -366,6 +541,13 @@ function openModal(item) {
         $noteP.append(document.createTextNode(item.annotation));
         $info.append($noteP);
     }
+    
+    $info.append($('<hr>', { style: 'margin: 20px 0; border: 0; border-top: 1px solid #eee;' }));
+    $info.append($('<a>', {
+        href: 'content.html?id=' + item.id,
+        class: 'detail-link',
+        text: '상세 페이지에서 보기 →'
+    }));
     
     $('#lightbox').css('display', 'flex').hide().fadeIn(200);
 }
