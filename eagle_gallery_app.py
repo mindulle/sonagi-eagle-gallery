@@ -54,12 +54,10 @@ def get_items(limit: int = 50, offset: int = 0, search: str = ""):
         params.extend([search_term, search_term, search_term])
         base_query += where_clause
 
-    # Get total count first
     count_query = f"SELECT COUNT(*) as total {base_query}"
     c.execute(count_query, params)
     total_count = c.fetchone()["total"]
 
-    # Get paginated items
     query = f"SELECT * {base_query} ORDER BY id DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
 
@@ -80,6 +78,68 @@ def get_items(limit: int = 50, offset: int = 0, search: str = ""):
 
     conn.close()
     return {"total": total_count, "items": items}
+
+
+@app.get("/api/items/{item_id}")
+def get_item_detail(item_id: str):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT * FROM items WHERE id = ?", (item_id,))
+    row = c.fetchone()
+    conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "ext": row["ext"],
+        "tags": json.loads(row["tags"]) if row["tags"] else [],
+        "annotation": row["annotation"],
+        "url": row["url"],
+        "has_thumbnail": bool(row["thumbnail_path"]),
+    }
+
+
+@app.get("/api/tags")
+def get_tags(limit: int = 20):
+    conn = get_db()
+    c = conn.cursor()
+    # Using json_each to extract individual tags from the JSON array
+    c.execute(
+        """
+        SELECT value as tag, count(*) as count
+        FROM items, json_each(items.tags)
+        GROUP BY value
+        ORDER BY count DESC
+        LIMIT ?
+    """,
+        (limit,),
+    )
+    tags = [{"tag": row["tag"], "count": row["count"]} for row in c.fetchall()]
+    conn.close()
+    return tags
+
+
+@app.get("/api/exts")
+def get_exts(limit: int = 20):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT ext, count(*) as count
+        FROM items
+        WHERE ext != '' AND ext IS NOT NULL
+        GROUP BY ext
+        ORDER BY count DESC
+        LIMIT ?
+    """,
+        (limit,),
+    )
+    exts = [{"ext": row["ext"], "count": row["count"]} for row in c.fetchall()]
+    conn.close()
+    return exts
 
 
 @app.get("/api/image/{item_id}/{type}")
