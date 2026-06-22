@@ -113,9 +113,24 @@ body { background: #faf9f7; color: #333; overflow-y: scroll; }
     border-bottom: 1px solid #eee;
 }
 
-/* Gallery Masonry Prep (CEO-230) */
+/* Gallery Masonry Layout (CEO-230) */
+.gallery {
+    padding: 20px;
+    column-count: 5;
+    column-gap: 20px;
 }
 
+.card {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.2s;
+    break-inside: avoid;
+    margin-bottom: 20px;
+    display: inline-block;
+    width: 100%;
 }
 
 .card:hover {
@@ -167,11 +182,13 @@ body { background: #faf9f7; color: #333; overflow-y: scroll; }
     padding: 20px;
     color: #666;
 }
+
 .spinner {
     width: 20px; height: 20px;
     border: 3px solid #f3f3f3; border-top: 3px solid #1991B9;
     border-radius: 50%; animation: spin 1s linear infinite;
 }
+
 @keyframes spin { 100% { transform: rotate(360deg); } }
 .no-results { grid-column: 1 / -1; text-align: center; padding: 40px; color: #888; }
 
@@ -280,30 +297,6 @@ body { background: #faf9f7; color: #333; overflow-y: scroll; }
 .download-btn:hover { background: #137798; }
 
 /* Responsive */
-    .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid #eee; }
-    .lightbox-content { flex-direction: column; height: 95vh; }
-    .lightbox-image-container { flex: 1; min-height: 300px; }
-}
-/* Masonry Layout Updates for .gallery and .card */
-.gallery {
-    padding: 20px;
-    column-count: 5;
-    column-gap: 20px;
-}
-
-.card {
-    background: #fff;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: transform 0.2s;
-    break-inside: avoid;
-    margin-bottom: 20px;
-    display: inline-block;
-    width: 100%;
-}
-
 @media (max-width: 1400px) {
     .gallery { column-count: 4; }
 }
