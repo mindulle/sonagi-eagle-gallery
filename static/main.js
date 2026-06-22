@@ -13,6 +13,8 @@ const SONAGI_SYMBOL_SVG = `<svg width="80" height="80" viewBox="0 0 100 100" fil
 
 const FOLDER_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>`;
 
+const HEAVY_EXTS = ['psd', 'ai', 'fig', 'blend', 'c4d', 'mp4', 'mov', 'pdf', 'zip'];
+
 window.onload = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const querySearch = urlParams.get('search');
@@ -21,9 +23,7 @@ window.onload = () => {
         document.getElementById('search').value = currentSearch;
     }
 
-    // CEO-228: Load Sidebar Data
     loadSidebarFilters();
-
     loadItems();
 };
 
@@ -131,23 +131,22 @@ async function loadItems() {
             imgContainer.className = 'img-container';
 
             const img = document.createElement('img');
-            img.src = imgSrc;
             img.loading = 'lazy';
+
+            // Attach onerror before setting src to avoid race conditions
             img.onerror = function () {
                 this.style.display = 'none';
                 const placeholder = document.createElement('div');
                 placeholder.className = 'placeholder-icon';
 
-                // Show Sonagi Symbol for heavy design files/videos, otherwise Folder
-                const heavyExts = ['psd', 'ai', 'fig', 'blend', 'c4d', 'mp4', 'mov', 'pdf', 'zip'];
-                if (item.ext && heavyExts.includes(item.ext.toLowerCase())) {
+                if (item.ext && HEAVY_EXTS.includes(item.ext.toLowerCase())) {
                     placeholder.innerHTML = SONAGI_SYMBOL_SVG;
                 } else {
                     placeholder.innerHTML = FOLDER_ICON_SVG;
                 }
-
                 this.parentElement.appendChild(placeholder);
             };
+            img.src = imgSrc;
 
             imgContainer.appendChild(img);
 
@@ -219,7 +218,6 @@ window.onscroll = () => {
     }
 };
 
-/* CEO-229: Lightbox Modal Logic */
 async function openModal(itemId) {
     const lightbox = document.getElementById('lightbox');
     const imgContainer = document.getElementById('modal-img-wrapper');
@@ -235,11 +233,12 @@ async function openModal(itemId) {
     document.getElementById('modal-tags').innerHTML = '';
     document.getElementById('modal-annotation').textContent = '';
 
-    img.src = `/api/image/${itemId}/original`;
+    // Attach onerror before setting src
     img.onerror = function () {
         this.style.display = 'none';
         imgContainer.innerHTML = `<div class="modal-placeholder">${SONAGI_SYMBOL_SVG}</div>`;
     };
+    img.src = `/api/image/${itemId}/original`;
 
     try {
         const res = await fetch(`/api/items/${itemId}`);
