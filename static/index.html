@@ -7,15 +7,67 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="header">
-        <input type="text" id="search" placeholder="Search tags, names, or extensions (e.g. png)..." onkeyup="if(event.key==='Enter') searchItems()">
-        <button onclick="searchItems()">Search</button>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Eagle Gallery</h2>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Extensions</h3>
+                <ul id="ext-list" class="filter-list">
+                    <li class="loading-text">Loading...</li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Popular Tags</h3>
+                <ul id="tag-list" class="filter-list">
+                    <li class="loading-text">Loading...</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <input type="text" id="search" placeholder="Search tags, names, or extensions (e.g. png)..." onkeyup="if(event.key==='Enter') searchItems()">
+                <button onclick="searchItems()">Search</button>
+            </div>
+            <div id="stats" class="stats"></div>
+
+            <div class="gallery" id="gallery"></div>
+
+            <div id="loading" class="loading-container">
+                <div class="spinner"></div>
+                <span>Loading...</span>
+            </div>
+        </main>
     </div>
-    <div id="stats" class="stats"></div>
-    <div class="gallery" id="gallery"></div>
-    <div id="loading" class="loading-container">
-        <div class="spinner"></div>
-        <span>Loading...</span>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <div class="lightbox-overlay" onclick="closeModal()"></div>
+        <div class="lightbox-content">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <div class="lightbox-image-container">
+                <img id="modal-img" src="" alt="Preview">
+            </div>
+            <div class="lightbox-info">
+                <h2 id="modal-title"></h2>
+                <div class="modal-meta">
+                    <p><strong>Extension:</strong> <span id="modal-ext"></span></p>
+                    <p><strong>URL:</strong> <a id="modal-url" href="#" target="_blank"></a></p>
+                </div>
+                <div class="modal-tags" id="modal-tags"></div>
+                <div class="modal-note">
+                    <strong>Note:</strong>
+                    <p id="modal-annotation"></p>
+                </div>
+                <a id="modal-original-link" href="#" target="_blank" class="download-btn">View Original</a>
+            </div>
+        </div>
     </div>
 
     <script src="/static/main.js"></script>
