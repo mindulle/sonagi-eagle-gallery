@@ -114,21 +114,8 @@ body { background: #faf9f7; color: #333; overflow-y: scroll; }
 }
 
 /* Gallery Masonry Prep (CEO-230) */
-.gallery {
-    padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-    align-items: start;
 }
 
-.card {
-    background: #fff;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: transform 0.2s;
 }
 
 .card:hover {
@@ -293,9 +280,46 @@ body { background: #faf9f7; color: #333; overflow-y: scroll; }
 .download-btn:hover { background: #137798; }
 
 /* Responsive */
+    .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid #eee; }
+    .lightbox-content { flex-direction: column; height: 95vh; }
+    .lightbox-image-container { flex: 1; min-height: 300px; }
+}
+/* Masonry Layout Updates for .gallery and .card */
+.gallery {
+    padding: 20px;
+    column-count: 5;
+    column-gap: 20px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.2s;
+    break-inside: avoid;
+    margin-bottom: 20px;
+    display: inline-block;
+    width: 100%;
+}
+
+@media (max-width: 1400px) {
+    .gallery { column-count: 4; }
+}
+
+@media (max-width: 1100px) {
+    .gallery { column-count: 3; }
+}
+
 @media (max-width: 768px) {
+    .gallery { column-count: 2; }
     .layout { flex-direction: column; }
     .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid #eee; }
     .lightbox-content { flex-direction: column; height: 95vh; }
     .lightbox-image-container { flex: 1; min-height: 300px; }
+}
+
+@media (max-width: 480px) {
+    .gallery { column-count: 1; }
 }
