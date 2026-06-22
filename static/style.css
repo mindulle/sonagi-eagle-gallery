@@ -44,9 +44,9 @@ button:hover { background: #0056b3; }
     100% { transform: rotate(360deg); }
 }
 
-.tag-ext {
-    background-color: #1991B9 !important;
-    color: white !important;
+.gallery .card-info .tag-ext {
+    background-color: #1991B9;
+    color: white;
     font-weight: bold;
 }
 

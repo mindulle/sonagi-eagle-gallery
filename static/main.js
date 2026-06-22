@@ -33,8 +33,18 @@ async function loadItems() {
 
         if (offset === 0) {
             gallery.innerHTML = '';
-            const searchContext = currentSearch ? ` for "${currentSearch}"` : '';
-            stats.innerHTML = `Found <strong>${totalItems}</strong> items${searchContext}`;
+            stats.innerHTML = '';
+
+            const foundSpan = document.createElement('span');
+            foundSpan.innerHTML = `Found <strong>${totalItems}</strong> items`;
+            stats.appendChild(foundSpan);
+
+            if (currentSearch) {
+                const searchSpan = document.createElement('span');
+                searchSpan.textContent = ` for "${currentSearch}"`;
+                stats.appendChild(searchSpan);
+            }
+
             if (totalItems === 0) {
                 gallery.innerHTML =
                     '<div class="no-results">No items found matching your search.</div>';
@@ -97,7 +107,11 @@ async function loadItems() {
     } catch (e) {
         console.error(e);
         const stats = document.getElementById('stats');
-        stats.innerHTML = `<span style="color: red;">Error loading items. Please try again.</span>`;
+        stats.innerHTML = '';
+        const errorSpan = document.createElement('span');
+        errorSpan.style.color = 'red';
+        errorSpan.textContent = 'Error loading items. Please try again.';
+        stats.appendChild(errorSpan);
     } finally {
         isLoading = false;
         document.getElementById('loading').style.display = 'none';
