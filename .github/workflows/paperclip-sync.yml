@@ -16,25 +16,27 @@ jobs:
         run: |
           source ~/.paperclip_env
 
-          # Extract CEO-XXX from the PR title
-          ISSUE_ID=$(echo "$PR_TITLE" | grep -o 'CEO-[0-9]\+')
+          # Extract all CEO-XXX from the PR title into an array (handling no matches safely)
+          ISSUE_IDS=$(echo "$PR_TITLE" | grep -o 'CEO-[0-9]\+' || true)
 
-          if [ -n "$ISSUE_ID" ]; then
-            echo "Updating issue $ISSUE_ID to done..."
+          if [ -n "$ISSUE_IDS" ]; then
+            for ID in $ISSUE_IDS; do
+              echo "Updating issue $ID to done..."
 
-            # Add a comment first
-            curl -s -X POST "http://llmops-instance.tailb95307.ts.net:3100/api/issues/$ISSUE_ID/comments" \
-              -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d "{\"body\": \"PR merged successfully! ✅\\n[View PR]($PR_URL)\"}"
+              # Add a comment first
+              curl -s -X POST "http://llmops-instance.tailb95307.ts.net:3100/api/issues/$ID/comments" \
+                -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d "{\"body\": \"PR merged successfully! ✅\\n[View PR]($PR_URL)\"}"
 
-            # Update status to done
-            curl -s -X PATCH "http://llmops-instance.tailb95307.ts.net:3100/api/issues/$ISSUE_ID" \
-              -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d '{"status": "done"}'
+              # Update status to done
+              curl -s -X PATCH "http://llmops-instance.tailb95307.ts.net:3100/api/issues/$ID" \
+                -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d '{"status": "done"}'
 
-            echo "Issue updated successfully."
+              echo "Issue $ID updated successfully."
+            done
           else
             echo "No issue ID found in PR title."
           fi
