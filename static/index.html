@@ -8,11 +8,15 @@
 </head>
 <body>
     <div class="header">
-        <input type="text" id="search" placeholder="Search tags or names..." onkeyup="if(event.key==='Enter') searchItems()">
+        <input type="text" id="search" placeholder="Search tags, names, or extensions (e.g. png)..." onkeyup="if(event.key==='Enter') searchItems()">
         <button onclick="searchItems()">Search</button>
     </div>
+    <div id="stats" class="stats"></div>
     <div class="gallery" id="gallery"></div>
-    <div id="loading">Loading more...</div>
+    <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+    </div>
 
     <script src="/static/main.js"></script>
 </body>

@@ -44,15 +44,23 @@ def get_items(limit: int = 50, offset: int = 0, search: str = ""):
     conn = get_db()
     c = conn.cursor()
 
-    query = "SELECT * FROM items"
+    base_query = "FROM items"
+    where_clause = ""
     params = []
 
     if search:
-        query += " WHERE name LIKE ? OR tags LIKE ?"
+        where_clause = " WHERE name LIKE ? OR tags LIKE ? OR ext LIKE ?"
         search_term = "%" + search + "%"
-        params.extend([search_term, search_term])
+        params.extend([search_term, search_term, search_term])
+        base_query += where_clause
 
-    query += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    # Get total count first
+    count_query = f"SELECT COUNT(*) as total {base_query}"
+    c.execute(count_query, params)
+    total_count = c.fetchone()["total"]
+
+    # Get paginated items
+    query = f"SELECT * {base_query} ORDER BY id DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
 
     c.execute(query, params)
@@ -71,7 +79,7 @@ def get_items(limit: int = 50, offset: int = 0, search: str = ""):
         )
 
     conn.close()
-    return items
+    return {"total": total_count, "items": items}
 
 
 @app.get("/api/image/{item_id}/{type}")

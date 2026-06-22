@@ -1,6 +1,8 @@
 let offset = 0;
 let currentSearch = '';
 let isLoading = false;
+let hasMore = true;
+let totalItems = 0;
 
 window.onload = () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -13,18 +15,45 @@ window.onload = () => {
 };
 
 async function loadItems() {
-    if (isLoading) return;
+    if (isLoading || !hasMore) return;
     isLoading = true;
-    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading').style.display = 'flex';
 
     try {
         const res = await fetch(
             `/api/items?limit=50&offset=${offset}&search=${encodeURIComponent(currentSearch)}`
         );
-        const items = await res.json();
+        const data = await res.json();
+
+        totalItems = data.total;
+        const items = data.items;
 
         const gallery = document.getElementById('gallery');
-        if (offset === 0) gallery.innerHTML = '';
+        const stats = document.getElementById('stats');
+
+        if (offset === 0) {
+            gallery.innerHTML = '';
+            stats.innerHTML = '';
+
+            const foundSpan = document.createElement('span');
+            foundSpan.innerHTML = `Found <strong>${totalItems}</strong> items`;
+            stats.appendChild(foundSpan);
+
+            if (currentSearch) {
+                const searchSpan = document.createElement('span');
+                searchSpan.textContent = ` for "${currentSearch}"`;
+                stats.appendChild(searchSpan);
+            }
+
+            if (totalItems === 0) {
+                gallery.innerHTML =
+                    '<div class="no-results">No items found matching your search.</div>';
+            }
+        }
+
+        if (items.length < 50) {
+            hasMore = false;
+        }
 
         for (const item of items) {
             const card = document.createElement('div');
@@ -50,6 +79,15 @@ async function loadItems() {
             title.textContent = item.name || 'Untitled';
 
             const tagsContainer = document.createElement('div');
+
+            // Add extension as a distinct tag if available
+            if (item.ext) {
+                const extSpan = document.createElement('span');
+                extSpan.className = 'tag tag-ext';
+                extSpan.textContent = item.ext.toUpperCase();
+                tagsContainer.appendChild(extSpan);
+            }
+
             for (const t of item.tags.slice(0, 3)) {
                 const tagSpan = document.createElement('span');
                 tagSpan.className = 'tag';
@@ -68,6 +106,12 @@ async function loadItems() {
         offset += 50;
     } catch (e) {
         console.error(e);
+        const stats = document.getElementById('stats');
+        stats.innerHTML = '';
+        const errorSpan = document.createElement('span');
+        errorSpan.style.color = 'red';
+        errorSpan.textContent = 'Error loading items. Please try again.';
+        stats.appendChild(errorSpan);
     } finally {
         isLoading = false;
         document.getElementById('loading').style.display = 'none';
@@ -77,6 +121,7 @@ async function loadItems() {
 function searchItems() {
     currentSearch = document.getElementById('search').value;
     offset = 0;
+    hasMore = true;
 
     const newUrl = new URL(window.location.href);
     if (currentSearch) {
