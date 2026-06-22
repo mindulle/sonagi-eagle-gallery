@@ -88,8 +88,9 @@ def export_project():
         "exts": exts_data
     }
     
-    with open(os.path.join(OUTPUT_DIR, "data.js"), "w", encoding="utf-8") as f:
-        f.write("const galleryData = " + json.dumps(export_data, ensure_ascii=False, indent=2) + ";\n")
+    # Save as data.json instead of data.js
+    with open(os.path.join(OUTPUT_DIR, "data.json"), "w", encoding="utf-8") as f:
+        json.dump(export_data, f, ensure_ascii=False, indent=2)
 
     html_index = """<!DOCTYPE html>
 <html lang="ko">
@@ -99,7 +100,6 @@ def export_project():
     <title>Eagle Gallery - Home</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://code.jquery.com/jquery-4.0.0-beta.min.js"></script>
-    <script src="data.js"></script>
     <script src="main.js" defer></script>
 </head>
 <body>
@@ -131,7 +131,7 @@ def export_project():
                 <input type="text" id="search" placeholder="Search by name or tag...">
             </div>
             <div class="gallery" id="gallery">
-                <!-- jQuery will inject cards here -->
+                <div class="loading-msg">Loading data.json...<br><small>(로컬 환경 실행 시 Live Server 등 웹 서버가 필요합니다)</small></div>
             </div>
         </article>
     </main>
@@ -160,17 +160,25 @@ def export_project():
     <title>Eagle Gallery - Content Detail</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://code.jquery.com/jquery-4.0.0-beta.min.js"></script>
-    <script src="data.js"></script>
     <script>
-    $(function() {
-        const params = new URLSearchParams(location.search);
-        const id = params.get('id');
-        if (!id) return showError("아이템 ID가 지정되지 않았습니다. 갤러리에서 항목을 선택해주세요.");
-        
-        const item = galleryData.items.find(i => i.id === id);
-        if (!item) return showError("해당 아이템을 찾을 수 없습니다.");
-        
-        renderDetail(item);
+    $(async function() {
+        try {
+            const response = await fetch('data.json');
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
+            
+            const params = new URLSearchParams(location.search);
+            const id = params.get('id');
+            if (!id) return showError("아이템 ID가 지정되지 않았습니다. 갤러리에서 항목을 선택해주세요.");
+            
+            const item = data.items.find(i => i.id === id);
+            if (!item) return showError("해당 아이템을 찾을 수 없습니다.");
+            
+            renderDetail(item);
+        } catch (error) {
+            console.error(error);
+            showError("data.json 데이터를 불러오는데 실패했습니다. (CORS 정책 제한 또는 파일 누락)");
+        }
     });
 
     function showError(msg) {
@@ -277,25 +285,29 @@ def export_project():
         </section>
         
         <section class="tech-section">
-            <h3>2. 데이터 직렬화 및 CORS 우회 (Data Serialization)</h3>
-            <p>수업 시간에 배운 <code>Fetch API</code>와 <code>JSON</code> 데이터를 활용하는 것이 일반적이나, 로컬 환경(<code>file://</code> 프로토콜)에서 파일을 직접 열 경우 브라우저의 <b>CORS (Cross-Origin Resource Sharing) 보안 정책</b>으로 인해 <code>fetch('data.json')</code>이 차단되는 문제가 발생합니다.</p>
-            <p>이를 해결하기 위해 JSON 데이터를 JavaScript 객체 리터럴 형태로 직렬화하여 <code>data.js</code>에 전역 변수(<code>galleryData</code>)로 할당하는 방식을 채택했습니다. 이를 통해 로컬 환경에서도 외부 서버 없이 즉시 데이터를 로드할 수 있습니다.</p>
-            <div class="code-block"><pre><code>// data.js (서버 덤프 스크립트에서 자동 생성)
-const galleryData = {
-  "items": [
-    {
-      "id": "M83ARZ1PFTFOJ",
-      "name": "Google 로고 작도 과정",
-      "ext": "png",
-      "tags": ["Design", "Logo"]
+            <h3>2. 비동기 데이터 로딩 (Fetch API & JSON)</h3>
+            <p>수업 시간에 배운 <code>Fetch API</code>와 <code>async/await</code> 키워드를 활용하여 서버 역할을 하는 <code>data.json</code> 파일에서 비동기적으로 갤러리 데이터를 불러옵니다. 과제 제출 규정에 따라 데이터를 분리된 JSON 형식으로 관리하며, 네트워크 지연을 고려해 데이터를 모두 받을 때까지 대기(await)한 후 화면 렌더링을 시작합니다.</p>
+            <div class="code-block"><pre><code>// main.js - Fetch API 데이터 호출 발췌
+let galleryData = { items: [], tags: [], exts: [] };
+
+$(async function() {
+    try {
+        const response = await fetch('data.json');
+        if (!response.ok) throw new Error('Network error');
+        
+        galleryData = await response.json(); // JSON 파싱 완료 대기
+        
+        renderSidebar(galleryData); // 사이드바 렌더링
+        renderGallery(galleryData.items); // 갤러리 렌더링
+    } catch (error) {
+        console.error("데이터 로드 실패:", error);
     }
-  ]
-};</code></pre></div>
+});</code></pre></div>
         </section>
 
         <section class="tech-section">
             <h3>3. jQuery DOM 동적 렌더링 (Dynamic DOM Rendering)</h3>
-            <p>데이터 배열을 순회하며 동적으로 HTML 요소를 생성하고 화면에 부착(Append)합니다. 수업에서 다룬 배열의 <code>map()</code> 순회 방식과 더불어, jQuery의 <code>$.each()</code> 유틸리티와 <code>$('&lt;tag&gt;')</code> 팩토리 함수를 조합 활용하여 직관적인 DOM 조작을 구현했습니다.</p>
+            <p>불러온 JSON 배열을 순회하며 동적으로 HTML 요소를 생성하고 화면에 부착(Append)합니다. 수업에서 다룬 배열 순회 방식과 더불어, 허용된 <code>jQuery 4.0.0-beta</code>의 <code>$.each()</code> 유틸리티 및 <code>$('&lt;tag&gt;')</code> 팩토리 함수를 조합하여 직관적이고 캡슐화된 DOM 조작을 구현했습니다.</p>
             <div class="code-block"><pre><code>// main.js - 갤러리 렌더링 발췌
 function renderGallery(items) {
     const $gallery = $('#gallery').empty();
@@ -314,8 +326,8 @@ function renderGallery(items) {
         </section>
 
         <section class="tech-section">
-            <h3>4. 배열 메서드를 활용한 필터링 (Array Filtering)</h3>
-            <p>사이드바의 태그를 클릭하거나 검색바에 텍스트를 입력하면, 자바스크립트의 내장 배열 메서드인 <code>Array.prototype.filter()</code>와 <code>some()</code>을 사용하여 조건에 맞는 아이템만 추출한 후 화면을 재렌더링합니다.</p>
+            <h3>4. 배열 메서드를 활용한 검색/필터링 (Array Filtering)</h3>
+            <p>사이드바의 태그를 클릭하거나 상단 검색바에 텍스트를 입력하면, 자바스크립트의 내장 배열 메서드인 <code>Array.prototype.filter()</code>와 <code>some()</code>을 사용하여 조건에 맞는 아이템만 새 배열로 추출한 후 갤러리 영역을 즉시 재렌더링합니다.</p>
             <div class="code-block"><pre><code>// main.js - 검색 필터링 발췌
 function filterGallery(term) {
     term = term.toLowerCase();
@@ -331,8 +343,8 @@ function filterGallery(term) {
         </section>
 
         <section class="tech-section">
-            <h3>5. CSS Masonry 레이아웃 (Layout Design)</h3>
-            <p>높이가 제각각인 이미지들을 빈틈없이 정렬하기 위해 무거운 JS 라이브러리를 사용하는 대신, CSS3의 다단 편집 기능인 <code>column-count</code>와 <code>break-inside: avoid</code> 속성을 조합하여 가볍고 반응형에 최적화된 벽돌형(Masonry) 그리드를 구현했습니다.</p>
+            <h3>5. 반응형 CSS Masonry 레이아웃 (Responsive Layout)</h3>
+            <p>높이가 제각각인 이미지들을 빈틈없이 정렬하기 위해 무거운 서드파티 JS 라이브러리를 배제하고, CSS3의 다단 편집 기능인 <code>column-count</code>와 <code>break-inside: avoid</code> 속성을 조합하여 가볍고 반응형에 최적화된 벽돌형(Masonry) 그리드를 순수 CSS로 구현했습니다.</p>
             <div class="code-block"><pre><code>/* style.css */
 .gallery { 
     column-count: 4; 
@@ -344,6 +356,7 @@ function filterGallery(term) {
     break-inside: avoid; /* 카드가 단 사이에서 쪼개지는 것 방지 */
     margin-bottom: 20px;
 }
+/* 화면 크기에 따른 미디어 쿼리 */
 @media (max-width: 1024px) { .gallery { column-count: 3; } }
 @media (max-width: 768px) { .gallery { column-count: 2; } }</code></pre></div>
         </section>
@@ -370,6 +383,7 @@ nav a:hover, nav a.active { opacity: 1; text-decoration: underline; }
 .main-content { flex: 1; padding: 20px; }
 .search-bar { margin-bottom: 20px; }
 .search-bar input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+.loading-msg { padding: 40px; text-align: center; color: #666; font-size: 1.2em; width: 100%; grid-column: 1 / -1; }
 .gallery { column-count: 4; column-gap: 20px; }
 .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; break-inside: avoid; display: inline-block; width: 100%; cursor: pointer; }
 .card img { width: 100%; display: block; background: #f4f4f4; min-height: 100px; }
@@ -423,16 +437,32 @@ footer { background: #333; color: white; text-align: center; padding: 20px; marg
 }
 """
 
-    js_content = """$(function() {
-    renderSidebar(galleryData);
-    renderGallery(galleryData.items);
+    js_content = """let galleryData = { items: [], tags: [], exts: [] };
 
-    const initTag = new URLSearchParams(location.search).get('tag');
-    if (initTag) {
-        $('#search').val(initTag);
-        filterGallery(initTag);
+$(async function() {
+    // 1. Fetch data.json asynchronously
+    try {
+        const response = await fetch('data.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        galleryData = await response.json();
+        
+        // 2. Render UI
+        renderSidebar(galleryData);
+        renderGallery(galleryData.items);
+
+        // 3. Check for tag URL parameter
+        const initTag = new URLSearchParams(location.search).get('tag');
+        if (initTag) {
+            $('#search').val(initTag);
+            filterGallery(initTag);
+        }
+    } catch (error) {
+        console.error("Data fetch error:", error);
+        $('#gallery').html('<div class="loading-msg" style="color: #c0392b;"><b>데이터 로드 실패</b><br>data.json 파일을 불러오지 못했습니다.<br><small>로컬에서 실행 시 CORS 보안 정책으로 차단되었을 수 있습니다. VSCode Live Server 등을 통해 실행해주세요.</small></div>');
     }
 
+    // Event Listeners
     $('#search').on('keyup', function() {
         const term = $(this).val().toLowerCase();
         filterGallery(term);
@@ -552,6 +582,10 @@ function openModal(item) {
     $('#lightbox').css('display', 'flex').hide().fadeIn(200);
 }
 """
+
+    # If data.js exists from previous versions, remove it to avoid confusion
+    if os.path.exists(os.path.join(OUTPUT_DIR, "data.js")):
+        os.remove(os.path.join(OUTPUT_DIR, "data.js"))
 
     with open(os.path.join(OUTPUT_DIR, "index.html"), "w", encoding="utf-8") as f: f.write(html_index)
     with open(os.path.join(OUTPUT_DIR, "content.html"), "w", encoding="utf-8") as f: f.write(html_content)
