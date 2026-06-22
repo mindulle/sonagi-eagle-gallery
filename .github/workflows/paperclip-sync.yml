@@ -1,0 +1,40 @@
+name: Sync to Paperclip
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  update-issue:
+    if: github.event.pull_request.merged == true
+    runs-on: self-hosted
+    steps:
+      - name: Extract Issue ID and Update Paperclip
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          source ~/.paperclip_env
+
+          # Extract CEO-XXX from the PR title
+          ISSUE_ID=$(echo "$PR_TITLE" | grep -o 'CEO-[0-9]\+')
+
+          if [ -n "$ISSUE_ID" ]; then
+            echo "Updating issue $ISSUE_ID to done..."
+
+            # Add a comment first
+            curl -s -X POST "http://llmops-instance.tailb95307.ts.net:3100/api/issues/$ISSUE_ID/comments" \
+              -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"body\": \"PR merged successfully! ✅\\n[View PR]($PR_URL)\"}"
+
+            # Update status to done
+            curl -s -X PATCH "http://llmops-instance.tailb95307.ts.net:3100/api/issues/$ISSUE_ID" \
+              -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{"status": "done"}'
+
+            echo "Issue updated successfully."
+          else
+            echo "No issue ID found in PR title."
+          fi
